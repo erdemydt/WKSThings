@@ -10,5 +10,14 @@ FetchContent_Declare(polyscope
 FetchContent_MakeAvailable(polyscope)
 
 
+FetchContent_Declare(eigen
+  GIT_REPOSITORY https://gitlab.com/libeigen/eigen.git
+  GIT_TAG 3.4.0)
+set(EIGEN_BUILD_DOC OFF)
+set(BUILD_TESTING OFF)
+set(EIGEN_BUILD_TESTING OFF)
+FetchContent_MakeAvailable(eigen)
+
+
 add_executable(app src/main.cpp)
-target_link_libraries(app PRIVATE polyscope)
+target_link_libraries(app PRIVATE polyscope Eigen3::Eigen)

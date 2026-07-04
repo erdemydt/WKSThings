@@ -1,23 +1,29 @@
-#include "polyscope/polyscope.h"
-#include "polyscope/surface_mesh.h"
-
+#include <Eigen/Sparse>
+#include <iostream>
 #include <vector>
-#include <array>
 
 int main() {
-    // One triangle: three vertices, one face. Hardcoded, no file loading.
-    std::vector<std::array<double, 3>> vertices = {
-        {0.0, 0.0, 0.0},
-        {1.0, 0.0, 0.0},
-        {0.0, 1.0, 0.0}
-    };
-    std::vector<std::array<size_t, 3>> faces = {
-        {0, 1, 2}
-    };
+    int n = 4;
+    std::vector<Eigen::Triplet<double>> triplets;
 
-    polyscope::init();
-    polyscope::registerSurfaceMesh("my triangle", vertices, faces);
-    polyscope::show();
+    // Build a simple tridiagonal matrix: 2 on diagonal, -1 off-diagonal
+    for (int i = 0; i < n; ++i) {
+        triplets.emplace_back(i, i, 2.0);
+        if (i > 0)     triplets.emplace_back(i, i - 1, -1.0);
+        if (i < n - 1) triplets.emplace_back(i, i + 1, -1.0);
+    }
+    
+    Eigen::SparseMatrix<double> S(n, n);
+    S.setFromTriplets(triplets.begin(), triplets.end());
+    std::cout << "nonzeros = " << S.nonZeros() << "\n";
+    std::cout << "dense view:\n" << Eigen::MatrixXd(S) << "\n\n";
 
+    // Sparse solve
+    Eigen::VectorXd b = Eigen::VectorXd::Ones(n);
+    Eigen::SimplicialLDLT<Eigen::SparseMatrix<double>> solver;
+    solver.compute(S);
+    Eigen::VectorXd x = solver.solve(b);
+
+    std::cout << "residual norm = " << (S * x - b).norm() << "\n";
     return 0;
 }
