@@ -18,6 +18,10 @@ set(BUILD_TESTING OFF)
 set(EIGEN_BUILD_TESTING OFF)
 FetchContent_MakeAvailable(eigen)
 
+FetchContent_Declare(libigl
+  GIT_REPOSITORY https://github.com/libigl/libigl.git
+  GIT_TAG v2.5.0)
+FetchContent_MakeAvailable(libigl)
 
 add_executable(app src/main.cpp)
-target_link_libraries(app PRIVATE polyscope Eigen3::Eigen)
+target_link_libraries(app PRIVATE polyscope Eigen3::Eigen igl::core)
