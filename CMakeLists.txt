@@ -23,5 +23,8 @@ FetchContent_Declare(libigl
   GIT_TAG v2.5.0)
 FetchContent_MakeAvailable(libigl)
 
-add_executable(app src/main.cpp)
+add_executable(app 
+  src/main.cpp
+  src/mesh.cpp
+  )
 target_link_libraries(app PRIVATE polyscope Eigen3::Eigen igl::core)
