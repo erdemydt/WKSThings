@@ -26,5 +26,6 @@ FetchContent_MakeAvailable(libigl)
 add_executable(app 
   src/main.cpp
   src/mesh.cpp
+  src/operators.cpp
   )
 target_link_libraries(app PRIVATE polyscope Eigen3::Eigen igl::core)
