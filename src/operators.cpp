@@ -46,7 +46,7 @@ Eigen::SparseMatrix<double> build_stiffness(const Mesh& mesh) {
     return C;
 }
 
-Eigen::SparseMatrix<double> build_mass(const Mesh& mesh) {
+Eigen::VectorXd build_mass(const Mesh& mesh) {
     const Eigen::MatrixXd& V = mesh.vertices();
     const Eigen::MatrixXi& F = mesh.faces();
     const int n = mesh.num_vertices();
@@ -68,12 +68,7 @@ Eigen::SparseMatrix<double> build_mass(const Mesh& mesh) {
         diag(c) += third;
     }
 
-    Eigen::SparseMatrix<double> M(n, n);
-    M.reserve(n);
-    for (int i = 0; i < n; ++i)
-        M.insert(i, i) = diag(i);
-    M.makeCompressed();
-    return M;
+    return diag;
 }
 
 Operators build_operators(const Mesh& mesh) {
@@ -81,11 +76,13 @@ Operators build_operators(const Mesh& mesh) {
 }
 
 Operators build_operators_reference(const Mesh& mesh) {
-    Operators ops;
+Operators ops;
     Eigen::SparseMatrix<double> L;
     igl::cotmatrix(mesh.vertices(), mesh.faces(), L);
-    ops.stiffness = -L;  // libigl's L is negative-semidefinite; flip it
+    ops.stiffness = -L;
+    Eigen::SparseMatrix<double> M;
     igl::massmatrix(mesh.vertices(), mesh.faces(),
-        igl::MASSMATRIX_TYPE_BARYCENTRIC, ops.mass);
+        igl::MASSMATRIX_TYPE_BARYCENTRIC, M);
+    ops.mass = M.diagonal();   // sparse → vector at the oracle boundary
     return ops;
 }

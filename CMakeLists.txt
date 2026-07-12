@@ -23,9 +23,21 @@ FetchContent_Declare(libigl
   GIT_TAG v2.5.0)
 FetchContent_MakeAvailable(libigl)
 
+
+
+FetchContent_Declare(
+    spectra
+    GIT_REPOSITORY https://github.com/yixuan/spectra.git
+    GIT_TAG        v1.2.0       
+)
+FetchContent_MakeAvailable(spectra)
+
+
 add_executable(app 
   src/main.cpp
   src/mesh.cpp
   src/operators.cpp
+  src/spectrum.cpp
+  src/descriptor.cpp
   )
-target_link_libraries(app PRIVATE polyscope Eigen3::Eigen igl::core)
+target_link_libraries(app PRIVATE polyscope Eigen3::Eigen igl::core Spectra)

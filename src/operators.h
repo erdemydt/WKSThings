@@ -7,11 +7,11 @@
 //   C φ = λ M φ.
 struct Operators {
     Eigen::SparseMatrix<double> stiffness;  // C: cotangent, positive semidefinite
-    Eigen::SparseMatrix<double> mass;       // M: lumped (barycentric), diagonal
+    Eigen::VectorXd mass;       // M: lumped (barycentric), diagonal
 };
 
 Eigen::SparseMatrix<double> build_stiffness(const Mesh& mesh);
-Eigen::SparseMatrix<double> build_mass(const Mesh& mesh);
+Eigen::VectorXd build_mass(const Mesh& mesh);
 
 Operators build_operators(const Mesh& mesh);
 
