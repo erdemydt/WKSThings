@@ -11,6 +11,9 @@
 
 namespace {
 
+// ---------------------------------------------------------------------------
+// show_descriptor_comparison: one mesh, two descriptor fields side by side.
+// ---------------------------------------------------------------------------
 struct ViewState {
     Eigen::MatrixXd left_descriptor;
     Eigen::MatrixXd right_descriptor;
@@ -44,6 +47,48 @@ void callback() {
     ImGui::TextUnformatted("Use the same spatial scale on both sides.");
     if (ImGui::SliderInt("scale", &g_state.scale, 0, g_state.num_samples - 1)) {
         show_scale(g_state.scale);
+    }
+}
+
+// ---------------------------------------------------------------------------
+// show_pose_pair: two meshes, HKS + WKS + ground truth on each.
+// ---------------------------------------------------------------------------
+struct PairState {
+    Eigen::MatrixXd hks_a, hks_b, wks_a, wks_b;
+    int num_samples = 0;
+    int scale = 0;
+    polyscope::SurfaceMesh* mesh_a = nullptr;
+    polyscope::SurfaceMesh* mesh_b = nullptr;
+};
+
+PairState g_pair;
+
+// Re-add both descriptors at the current scale. WKS: col = scale (0 = global).
+// HKS: reversed, so the same slider position is the same spatial scale on both.
+// setEnabled is applied once (first call) to default to WKS; later re-adds inherit
+// the user's toggle choice, so switching to HKS in the panel sticks across slides.
+void update_pair(int scale) {
+    const int M = g_pair.num_samples;
+    const int wks_col = std::clamp(scale, 0, M - 1);
+    const int hks_col = (M - 1) - wks_col;
+
+    auto* wa = g_pair.mesh_a->addVertexScalarQuantity("WKS", g_pair.wks_a.col(wks_col).eval())
+                   ->setColorMap("viridis");
+    auto* wb = g_pair.mesh_b->addVertexScalarQuantity("WKS", g_pair.wks_b.col(wks_col).eval())
+                   ->setColorMap("viridis");
+    g_pair.mesh_a->addVertexScalarQuantity("HKS", g_pair.hks_a.col(hks_col).eval())->setColorMap("viridis");
+    g_pair.mesh_b->addVertexScalarQuantity("HKS", g_pair.hks_b.col(hks_col).eval())->setColorMap("viridis");
+
+    static bool first = true;
+    if (first) { wa->setEnabled(true); wb->setEnabled(true); first = false; }
+}
+
+void pair_callback() {
+    ImGui::TextUnformatted("Left = mesh A,  Right = mesh B (posed).");
+    ImGui::TextUnformatted("Scale: 0 = global ... M-1 = local (both same scale).");
+    ImGui::TextUnformatted("Toggle HKS / WKS / ground truth in the structure panel.");
+    if (ImGui::SliderInt("scale", &g_pair.scale, 0, g_pair.num_samples - 1)) {
+        update_pair(g_pair.scale);
     }
 }
 
@@ -92,5 +137,50 @@ void show_descriptor_comparison(const Mesh& mesh,
 
     show_scale(g_state.scale);
     polyscope::state::userCallback = callback;
+    polyscope::show();
+}
+
+void show_pose_pair(const Mesh& mesh_a,
+                    const Mesh& mesh_b,
+                    const Eigen::MatrixXd& hks_a,
+                    const Eigen::MatrixXd& hks_b,
+                    const Eigen::MatrixXd& wks_a,
+                    const Eigen::MatrixXd& wks_b) {
+    const int Na = mesh_a.num_vertices();
+    const int Nb = mesh_b.num_vertices();
+    if (hks_a.rows() != Na || wks_a.rows() != Na || hks_b.rows() != Nb || wks_b.rows() != Nb) {
+        throw std::invalid_argument("show_pose_pair: descriptor rows must match each mesh's vertex count.");
+    }
+    const int M = static_cast<int>(wks_a.cols());
+    if (hks_a.cols() != M || wks_b.cols() != M || hks_b.cols() != M || M <= 0) {
+        throw std::invalid_argument("show_pose_pair: all descriptors must share the same (positive) sample count.");
+    }
+
+    g_pair.hks_a = hks_a;  g_pair.hks_b = hks_b;
+    g_pair.wks_a = wks_a;  g_pair.wks_b = wks_b;
+    g_pair.num_samples = M;
+    g_pair.scale = M / 2;
+
+    // Offset mesh B along x so the two poses sit side by side.
+    const Eigen::MatrixXd& Va = mesh_a.vertices();
+    const double width = Va.col(0).maxCoeff() - Va.col(0).minCoeff();
+    const double gap = 1.3 * width;
+    Eigen::MatrixXd Vb = mesh_b.vertices();
+    Vb.col(0).array() += gap;
+
+    polyscope::init();
+    g_pair.mesh_a = polyscope::registerSurfaceMesh("mesh A", Va, mesh_a.faces());
+    g_pair.mesh_b = polyscope::registerSurfaceMesh("mesh B (posed)", Vb, mesh_b.faces());
+
+    // Ground-truth coloring: mesh A's height, mapped by vertex INDEX onto both meshes.
+    // Because index i corresponds across the pair, identical color = corresponding
+    // point. On B the posed limb carries A's colors, making the map visible directly.
+    // Disabled by default (WKS shown first); toggle it on in the panel.
+    const Eigen::VectorXd gt = Va.col(1);   // y = height
+    g_pair.mesh_a->addVertexScalarQuantity("ground truth (A height)", gt)->setColorMap("turbo");
+    g_pair.mesh_b->addVertexScalarQuantity("ground truth (A height)", gt)->setColorMap("turbo");
+
+    update_pair(g_pair.scale);              // creates HKS/WKS, enables WKS
+    polyscope::state::userCallback = pair_callback;
     polyscope::show();
 }

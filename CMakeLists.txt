@@ -3,6 +3,12 @@ project(gp_playground CXX)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
+if(NOT CMAKE_BUILD_TYPE)
+    set(CMAKE_BUILD_TYPE Release)
+endif()
+
+find_package(OpenMP)
+
 include(FetchContent)
 FetchContent_Declare(polyscope
   GIT_REPOSITORY https://github.com/nmwsharp/polyscope.git
@@ -40,6 +46,9 @@ add_executable(app
   src/spectrum.cpp
   src/descriptor.cpp
   src/visualizer.cpp
-  src/visualizer.h
+  src/corresponder.cpp
   )
 target_link_libraries(app PRIVATE polyscope Eigen3::Eigen igl::core Spectra)
+if(OpenMP_CXX_FOUND)
+    target_link_libraries(app PRIVATE OpenMP::OpenMP_CXX)
+endif()
