@@ -39,5 +39,7 @@ add_executable(app
   src/operators.cpp
   src/spectrum.cpp
   src/descriptor.cpp
+  src/visualizer.cpp
+  src/visualizer.h
   )
 target_link_libraries(app PRIVATE polyscope Eigen3::Eigen igl::core Spectra)
