@@ -143,3 +143,11 @@ Eigen::VectorXd Spectrum::project(const Eigen::VectorXd& f) const {
     // M f is elementwise since M is diagonal:  a = Phi^T (M .* f).
     return evecs_.transpose() * mass_.cwiseProduct(f);
 }
+
+Eigen::MatrixXd Spectrum::project(const Eigen::MatrixXd& D) const {
+    if (D.rows() != evecs_.rows()) {
+        throw std::runtime_error("Spectrum::project: field row count does not match N.");
+    }
+    // Phi^T M D, with M diagonal: scale each row of D by its mass, then Phi^T.
+    return evecs_.transpose() * (mass_.asDiagonal() * D);
+}

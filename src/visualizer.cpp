@@ -184,3 +184,53 @@ void show_pose_pair(const Mesh& mesh_a,
     polyscope::state::userCallback = pair_callback;
     polyscope::show();
 }
+
+namespace {
+
+// Per-vertex RGB from position: each axis min..max mapped to 0..1, giving a smooth
+// x->R, y->G, z->B field where distinct body parts get distinct colors.
+Eigen::MatrixXd position_rgb(const Eigen::MatrixXd& V) {
+    Eigen::MatrixXd c(V.rows(), 3);
+    for (int d = 0; d < 3; ++d) {
+        const double lo = V.col(d).minCoeff();
+        const double hi = V.col(d).maxCoeff();
+        const double range = (hi > lo) ? (hi - lo) : 1.0;
+        c.col(d) = (V.col(d).array() - lo) / range;
+    }
+    return c;
+}
+
+}  // namespace
+
+void show_correspondence(const Mesh& mesh_a,
+                         const Mesh& mesh_b,
+                         const Eigen::VectorXi& match) {
+    const int na = mesh_a.num_vertices();
+    const int nb = mesh_b.num_vertices();
+    if (static_cast<int>(match.size()) != na) {
+        throw std::invalid_argument("show_correspondence: match length must equal mesh A vertex count.");
+    }
+
+    const Eigen::MatrixXd& Va = mesh_a.vertices();
+    const Eigen::MatrixXd color_a = position_rgb(Va);
+
+    // Push A's colors to B through the map. Gray default reveals B vertices that
+    // nothing mapped to; collisions (several i -> same j) let the last one win.
+    Eigen::MatrixXd color_b = Eigen::MatrixXd::Constant(nb, 3, 0.6);
+    for (int i = 0; i < na; ++i) {
+        const int j = match(i);
+        if (j >= 0 && j < nb) color_b.row(j) = color_a.row(i);
+    }
+
+    const double width = Va.col(0).maxCoeff() - Va.col(0).minCoeff();
+    const double gap = 1.3 * width;
+    Eigen::MatrixXd Vb = mesh_b.vertices();
+    Vb.col(0).array() += gap;
+
+    polyscope::init();
+    auto* ma = polyscope::registerSurfaceMesh("A (source colors)", Va, mesh_a.faces());
+    auto* mb = polyscope::registerSurfaceMesh("B (transferred)", Vb, mesh_b.faces());
+    ma->addVertexColorQuantity("position RGB", color_a)->setEnabled(true);
+    mb->addVertexColorQuantity("transferred", color_b)->setEnabled(true);
+    polyscope::show();
+}

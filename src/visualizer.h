@@ -30,3 +30,12 @@ void show_pose_pair(const Mesh& mesh_a,
                     const Eigen::MatrixXd& hks_b,
                     const Eigen::MatrixXd& wks_a,
                     const Eigen::MatrixXd& wks_b);
+
+// Visualize a correspondence by color transfer. Mesh A is colored by its XYZ
+// position (x->R, y->G, z->B), a smooth field. Mesh B is painted by pushing those
+// colors through `match`: B vertex match(i) takes A vertex i's color. A correct
+// map makes B's colors line up with B's anatomy; errors show as speckle, and gray
+// patches are B vertices that nothing mapped to. `match` has length N_A, into B.
+void show_correspondence(const Mesh& mesh_a,
+                         const Mesh& mesh_b,
+                         const Eigen::VectorXi& match);
